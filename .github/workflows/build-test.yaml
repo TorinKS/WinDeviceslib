@@ -17,7 +17,14 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Pinned to windows-2022 for Visual Studio 2022. Do not use windows-latest or
+    # windows-2025: both now ship Visual Studio 2026, which the CMake version pinned
+    # below (3.29) cannot generate for - the 'Visual Studio 18 2026' generator was only
+    # added in CMake 4.2. Without a VS it recognises, CMake silently falls back to the
+    # NMake Makefiles generator and configuration fails with 'nmake: no such file or
+    # directory'. Bumping CMake to >= 4.2 is the alternative; keep the runner image and
+    # the CMake version pinned together either way.
+    runs-on: windows-2022
     strategy:
       matrix:
         config: [Debug, Release]
