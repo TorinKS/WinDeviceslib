@@ -58,29 +58,47 @@ internal static class NativeMethods
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    /// <summary>
+    /// Mirrors the native WD_DEVICE_INFO struct.
+    /// </summary>
+    /// <remarks>
+    /// The native char[] fields are UTF-8, not ANSI (see WinDevicesAPI.h). They are marshalled
+    /// as raw byte buffers and decoded explicitly via <see cref="Utf8Buffer.ToStringZ"/>; using
+    /// CharSet.Ansi with ByValTStr here would decode them in the system ANSI codepage and
+    /// mangle every non-ASCII character. Field order and sizes must match the native struct
+    /// exactly - byte buffers occupy the same space as the ByValTStr fields they replaced,
+    /// so the layout is unchanged and remains binary-compatible.
+    /// </remarks>
+    [StructLayout(LayoutKind.Sequential)]
     public struct WdDeviceInfo
     {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string Manufacturer;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256, ArraySubType = UnmanagedType.U1)]
+        public byte[] Manufacturer;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string Product;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256, ArraySubType = UnmanagedType.U1)]
+        public byte[] Product;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string SerialNumber;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256, ArraySubType = UnmanagedType.U1)]
+        public byte[] SerialNumber;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string Description;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256, ArraySubType = UnmanagedType.U1)]
+        public byte[] Description;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 512)]
-        public string DeviceId;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 512, ArraySubType = UnmanagedType.U1)]
+        public byte[] DeviceId;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-        public string FriendlyName;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256, ArraySubType = UnmanagedType.U1)]
+        public byte[] FriendlyName;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 512)]
-        public string DevicePath;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 512, ArraySubType = UnmanagedType.U1)]
+        public byte[] DevicePath;
 
         public uint VendorId;
         public uint ProductId;
@@ -97,23 +115,27 @@ internal static class NativeMethods
 
         public WdGuid DeviceClassGuid;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string VendorName;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 128, ArraySubType = UnmanagedType.U1)]
+        public byte[] VendorName;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-        public string ProductName;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 128, ArraySubType = UnmanagedType.U1)]
+        public byte[] ProductName;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
-        public string InterfaceClassName;
+        /// <summary>UTF-8 bytes, NUL-terminated. Decode with <see cref="Utf8Buffer.ToStringZ"/>.</summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 64, ArraySubType = UnmanagedType.U1)]
+        public byte[] InterfaceClassName;
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct WdVersionInfo
     {
         public int Major;
         public int Minor;
         public int Patch;
-        public IntPtr BuildDate; // const char* - will need to marshal
+        /// <summary>const char* - UTF-8, decoded via Marshal.PtrToStringUTF8.</summary>
+        public IntPtr BuildDate;
     }
 
     #endregion
@@ -150,7 +172,8 @@ internal static class NativeMethods
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern WdResult WD_GetVersion(out WdVersionInfo versionInfo);
 
-    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    /// <summary>Returns a const char* to a static UTF-8 message; decode with Marshal.PtrToStringUTF8.</summary>
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern IntPtr WD_GetErrorMessage(WdResult errorCode);
 
     #endregion

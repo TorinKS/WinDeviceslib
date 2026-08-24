@@ -71,7 +71,15 @@ typedef enum {
     WD_ERROR_UNKNOWN = -99
 } WD_RESULT;
 
-/* Device information structure (C-compatible) */
+/* Device information structure (C-compatible)
+ *
+ * STRING ENCODING: every char[] field below is UTF-8 encoded and NUL-terminated.
+ * They are NOT in the caller's ANSI codepage. Consumers must decode them as UTF-8;
+ * decoding them as ANSI corrupts every non-ASCII character (e.g. the German 'a-umlaut'
+ * U+00E4 is stored as the two bytes C3 A4 and would otherwise render as 'A-tilde,
+ * currency sign'). Strings too long for their buffer are truncated at a character
+ * boundary, so the result is always valid UTF-8.
+ */
 typedef struct {
     char manufacturer[256];
     char product[256];

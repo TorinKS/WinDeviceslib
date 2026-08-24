@@ -263,7 +263,7 @@ public sealed class DeviceManager : IDisposable
         string buildDate = string.Empty;
         if (versionInfo.BuildDate != IntPtr.Zero)
         {
-            buildDate = Marshal.PtrToStringAnsi(versionInfo.BuildDate) ?? string.Empty;
+            buildDate = Marshal.PtrToStringUTF8(versionInfo.BuildDate) ?? string.Empty;
         }
 
         return (versionInfo.Major, versionInfo.Minor, versionInfo.Patch, buildDate);

@@ -88,7 +88,7 @@ public class WinDevicesException : Exception
             var ptr = NativeMethods.WD_GetErrorMessage(errorCode);
             if (ptr != IntPtr.Zero)
             {
-                var msg = System.Runtime.InteropServices.Marshal.PtrToStringAnsi(ptr);
+                var msg = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(ptr);
                 if (!string.IsNullOrEmpty(msg))
                     return msg;
             }
