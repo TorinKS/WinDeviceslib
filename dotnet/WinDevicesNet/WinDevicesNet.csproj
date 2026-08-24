@@ -14,6 +14,11 @@
     <Description>.NET wrapper for WinDevices USB enumeration library</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The UTF-8 marshalling helper and the native struct layout are internal but must be unit-tested. -->
+    <InternalsVisibleTo Include="WinDevicesNet.Tests" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <Optimize>true</Optimize>
   </PropertyGroup>

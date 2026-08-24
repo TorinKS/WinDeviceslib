@@ -38,18 +38,49 @@ static void SafeStrCopy(char* dest, size_t destSize, const std::string& src) {
     }
 }
 
+/* Converts a wide string to UTF-8 and copies it into a fixed-size buffer.
+ *
+ * The destination always receives a NUL-terminated, *valid* UTF-8 sequence: if the
+ * converted text does not fit it is truncated at a character boundary rather than
+ * mid-sequence, so a partial multi-byte sequence is never emitted.
+ */
 static void SafeStrCopy(char* dest, size_t destSize, const std::wstring& src) {
-    if (dest && destSize > 0) {
-        // Convert wide string to narrow string
-        int size_needed = WideCharToMultiByte(CP_UTF8, 0, src.c_str(), (int)src.length(), NULL, 0, NULL, NULL);
-        if (size_needed > 0) {
-            size_t copyLen = (std::min)((size_t)size_needed, destSize - 1);
-            WideCharToMultiByte(CP_UTF8, 0, src.c_str(), (int)src.length(), dest, (int)copyLen, NULL, NULL);
-            dest[copyLen] = '\0';
-        } else {
-            dest[0] = '\0';
-        }
+    if (!dest || destSize == 0) {
+        return;
     }
+
+    dest[0] = '\0';
+
+    if (src.empty()) {
+        return;
+    }
+
+    /* Convert into a temporary buffer first. Passing a too-small buffer straight to
+     * WideCharToMultiByte does not truncate - it fails with ERROR_INSUFFICIENT_BUFFER
+     * and leaves the destination contents undefined. */
+    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, src.c_str(), (int)src.length(), NULL, 0, NULL, NULL);
+    if (sizeNeeded <= 0) {
+        return;
+    }
+
+    std::string utf8(static_cast<size_t>(sizeNeeded), '\0');
+    int written = WideCharToMultiByte(CP_UTF8, 0, src.c_str(), (int)src.length(),
+                                      &utf8[0], sizeNeeded, NULL, NULL);
+    if (written <= 0) {
+        return;
+    }
+    utf8.resize(static_cast<size_t>(written));
+
+    size_t copyLen = (std::min)(utf8.size(), destSize - 1);
+
+    /* Back off to a character boundary so a multi-byte sequence is never split.
+     * UTF-8 continuation bytes match 10xxxxxx. */
+    while (copyLen > 0 && (static_cast<unsigned char>(utf8[copyLen]) & 0xC0) == 0x80) {
+        --copyLen;
+    }
+
+    std::memcpy(dest, utf8.data(), copyLen);
+    dest[copyLen] = '\0';
 }
 
 /* Validate handle */

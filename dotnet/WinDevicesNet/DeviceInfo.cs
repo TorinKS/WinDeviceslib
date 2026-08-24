@@ -130,13 +130,13 @@ public sealed class DeviceInfo
 
         return new DeviceInfo
         {
-            Manufacturer = native.Manufacturer ?? string.Empty,
-            Product = native.Product ?? string.Empty,
-            SerialNumber = native.SerialNumber ?? string.Empty,
-            Description = native.Description ?? string.Empty,
-            DeviceId = native.DeviceId ?? string.Empty,
-            FriendlyName = native.FriendlyName ?? string.Empty,
-            DevicePath = native.DevicePath ?? string.Empty,
+            Manufacturer = Interop.Utf8Buffer.ToStringZ(native.Manufacturer),
+            Product = Interop.Utf8Buffer.ToStringZ(native.Product),
+            SerialNumber = Interop.Utf8Buffer.ToStringZ(native.SerialNumber),
+            Description = Interop.Utf8Buffer.ToStringZ(native.Description),
+            DeviceId = Interop.Utf8Buffer.ToStringZ(native.DeviceId),
+            FriendlyName = Interop.Utf8Buffer.ToStringZ(native.FriendlyName),
+            DevicePath = Interop.Utf8Buffer.ToStringZ(native.DevicePath),
             VendorId = native.VendorId,
             ProductId = native.ProductId,
             DeviceClass = native.DeviceClass,
@@ -147,9 +147,9 @@ public sealed class DeviceInfo
             IsUsbDevice = native.IsUsbDevice != 0,
             DeviceClassGuid = deviceClassGuid,
             DeviceClassName = DeviceClassGuids.GetClassName(deviceClassGuid),
-            VendorName = native.VendorName ?? string.Empty,
-            ProductName = native.ProductName ?? string.Empty,
-            InterfaceClassName = native.InterfaceClassName ?? string.Empty
+            VendorName = Interop.Utf8Buffer.ToStringZ(native.VendorName),
+            ProductName = Interop.Utf8Buffer.ToStringZ(native.ProductName),
+            InterfaceClassName = Interop.Utf8Buffer.ToStringZ(native.InterfaceClassName)
         };
     }
 }
