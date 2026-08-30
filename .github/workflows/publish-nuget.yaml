@@ -72,7 +72,11 @@ jobs:
       - name: Verify package layout
         shell: pwsh
         run: |
-          $pkg = Get-ChildItem artifacts/*.nupkg | Select-Object -First 1
+          # Match on the extension rather than a wildcard, so the symbol
+          # package sitting beside it can never be picked by ordering luck.
+          $pkg = Get-ChildItem artifacts -File |
+                 Where-Object Extension -eq '.nupkg' |
+                 Select-Object -First 1
           if (-not $pkg) { throw 'No .nupkg produced' }
           Write-Host "Inspecting $($pkg.Name)"
 
@@ -122,7 +126,19 @@ jobs:
           if (-not $env:TEMP_NUGET_KEY) {
             throw 'Trusted Publishing returned no key. Check that the repository variable NUGET_USER is set and that a Trusted Publisher policy for TorinKS/WinDeviceslib + publish-nuget.yaml exists on nuget.org.'
           }
-          dotnet nuget push 'artifacts/*.nupkg' `
+
+          # Resolve the package explicitly. A quoted wildcard reaches dotnet
+          # verbatim and is not expanded, which fails as
+          # "File does not exist (artifacts/*.nupkg)".
+          $pkg = Get-ChildItem artifacts -File |
+                 Where-Object Extension -eq '.nupkg' |
+                 Select-Object -First 1
+          if (-not $pkg) { throw 'No .nupkg found in artifacts/ to push.' }
+          Write-Host "Pushing $($pkg.Name)"
+
+          # The matching .snupkg beside it is picked up and pushed by NuGet
+          # automatically; it must not be pushed as a package in its own right.
+          dotnet nuget push $pkg.FullName `
             --api-key $env:TEMP_NUGET_KEY `
             --source https://api.nuget.org/v3/index.json `
             --skip-duplicate
