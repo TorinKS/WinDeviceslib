@@ -210,7 +210,10 @@ jobs:
 
   build-and-release:
     needs: increment-version
-    runs-on: windows-latest
+    # Pinned to VS 2022: this job runs install.cmd and ships the resulting
+    # binaries as release assets, so it must use the same toolset as the
+    # rest of the program rather than whatever windows-latest points at.
+    runs-on: windows-2022
     permissions:
       contents: write
       actions: read
@@ -225,10 +228,14 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1.14
-        with:
-          cmake-version: '3.29'
+      # Use the CMake preinstalled on the runner image rather than pinning a
+      # version. windows-latest moved to windows-2025-vs2026, and a CMake
+      # older than the image's Visual Studio cannot name its generator: it
+      # silently falls back to NMake Makefiles, and install.cmd then fails
+      # with "CMAKE_CXX_COMPILER not set". Same fix as build-test.yaml.
+      - name: Report CMake version
+        shell: cmd
+        run: cmake --version
 
       - name: Build and Install Debug
         shell: cmd

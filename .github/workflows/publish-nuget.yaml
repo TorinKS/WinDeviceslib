@@ -23,7 +23,12 @@ on:
 
 jobs:
   pack:
-    runs-on: windows-latest
+    # Pinned to VS 2022 deliberately. The native library shipped inside the
+    # package links the dynamic CRT, so its toolset sets the minimum
+    # Visual C++ Redistributable every consumer's machine must carry.
+    # windows-latest is now windows-2025-vs2026, which would silently raise
+    # that floor for every downstream deployment.
+    runs-on: windows-2022
 
     permissions:
       contents: read
