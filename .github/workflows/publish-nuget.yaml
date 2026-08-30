@@ -41,6 +41,31 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      # The version is derived with `git describe --tags --abbrev=0`, which
+      # returns the nearest *ancestor* tag. On a branch that has moved past
+      # its last tag that silently produces a package claiming a version its
+      # source no longer corresponds to. Publishing therefore requires HEAD
+      # to sit exactly on a tag, unless a version is passed explicitly.
+      #
+      # This is not hypothetical: 0.1.1 was published from a main that was
+      # six commits ahead of the v0.1.1 tag.
+      - name: Require HEAD to be exactly at a tag
+        if: (startsWith(github.ref, 'refs/tags/v') || inputs.publish) && inputs.version == ''
+        shell: pwsh
+        run: |
+          $tag = git describe --exact-match --tags HEAD 2>$null
+          if ($LASTEXITCODE -ne 0 -or -not $tag) {
+            $near = git describe --tags --abbrev=0 2>$null
+            throw @"
+HEAD is not at a tag, so the derived version would be wrong.
+The nearest ancestor tag is '$near', but this commit is not that release.
+
+Either push a new tag for this commit, or re-run this workflow with an
+explicit version input to publish deliberately.
+"@
+          }
+          Write-Host "Publishing from tag $tag"
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:

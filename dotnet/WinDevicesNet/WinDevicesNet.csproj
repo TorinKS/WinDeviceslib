@@ -71,10 +71,40 @@
       <Output TaskParameter="ExitCode" PropertyName="_GitDescribeExit" />
     </Exec>
 
+    <!--
+      The describe call above returns the nearest ancestor tag, so a commit
+      that has moved past its last tag would otherwise claim that tag's
+      version. Ask separately whether HEAD *is* that tag, and mark the build
+      as a prerelease when it is not, so a development build can never be
+      mistaken for the release it descends from.
+    -->
+    <Exec Command="git describe --exact-match --tags HEAD"
+          WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low"
+          ContinueOnError="true"
+          Condition="'$(PackageVersionOverride)' == ''">
+      <Output TaskParameter="ExitCode" PropertyName="_GitExactTagExit" />
+    </Exec>
+
+    <Exec Command="git rev-parse --short HEAD"
+          WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low"
+          ContinueOnError="true"
+          Condition="'$(PackageVersionOverride)' == '' And '$(_GitExactTagExit)' != '0'">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitShortSha" />
+    </Exec>
+
     <PropertyGroup>
       <_ResolvedVersion Condition="'$(PackageVersionOverride)' != ''">$(PackageVersionOverride)</_ResolvedVersion>
       <_ResolvedVersion Condition="'$(_ResolvedVersion)' == '' And '$(_GitDescribeExit)' == '0'">$(_GitDescribeOutput.Trim().TrimStart('v'))</_ResolvedVersion>
       <_ResolvedVersion Condition="'$(_ResolvedVersion)' == ''">$(FallbackVersion)</_ResolvedVersion>
+
+      <!-- Not sitting on a tag: this is a development build, not the release. -->
+      <_ResolvedVersion Condition="'$(PackageVersionOverride)' == '' And '$(_GitExactTagExit)' != '0' And '$(_GitShortSha)' != ''">$(_ResolvedVersion)-dev.$(_GitShortSha.Trim())</_ResolvedVersion>
 
       <Version>$(_ResolvedVersion)</Version>
       <PackageVersion>$(_ResolvedVersion)</PackageVersion>
