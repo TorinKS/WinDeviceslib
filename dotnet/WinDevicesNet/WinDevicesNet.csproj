@@ -99,21 +99,33 @@
     </Exec>
 
     <PropertyGroup>
-      <_ResolvedVersion Condition="'$(PackageVersionOverride)' != ''">$(PackageVersionOverride)</_ResolvedVersion>
-      <_ResolvedVersion Condition="'$(_ResolvedVersion)' == '' And '$(_GitDescribeExit)' == '0'">$(_GitDescribeOutput.Trim().TrimStart('v'))</_ResolvedVersion>
-      <_ResolvedVersion Condition="'$(_ResolvedVersion)' == ''">$(FallbackVersion)</_ResolvedVersion>
+      <!--
+        Two versions, deliberately. AssemblyVersion and FileVersion accept
+        only major[.minor[.build[.revision]]]; a prerelease suffix makes the
+        compiler fail with CS7034. Only the package and informational
+        versions may carry one.
+      -->
+      <_NumericVersion Condition="'$(PackageVersionOverride)' != ''">$(PackageVersionOverride)</_NumericVersion>
+      <_NumericVersion Condition="'$(_NumericVersion)' == '' And '$(_GitDescribeExit)' == '0'">$(_GitDescribeOutput.Trim().TrimStart('v'))</_NumericVersion>
+      <_NumericVersion Condition="'$(_NumericVersion)' == ''">$(FallbackVersion)</_NumericVersion>
+
+      <!-- An override may itself be a prerelease; keep the numeric part only. -->
+      <_NumericVersion Condition="$(_NumericVersion.Contains('-'))">$(_NumericVersion.Split('-')[0])</_NumericVersion>
+
+      <_PackageVersion>$(_NumericVersion)</_PackageVersion>
+      <_PackageVersion Condition="'$(PackageVersionOverride)' != ''">$(PackageVersionOverride)</_PackageVersion>
 
       <!-- Not sitting on a tag: this is a development build, not the release. -->
-      <_ResolvedVersion Condition="'$(PackageVersionOverride)' == '' And '$(_GitExactTagExit)' != '0' And '$(_GitShortSha)' != ''">$(_ResolvedVersion)-dev.$(_GitShortSha.Trim())</_ResolvedVersion>
+      <_PackageVersion Condition="'$(PackageVersionOverride)' == '' And '$(_GitExactTagExit)' != '0' And '$(_GitShortSha)' != ''">$(_NumericVersion)-dev.$(_GitShortSha.Trim())</_PackageVersion>
 
-      <Version>$(_ResolvedVersion)</Version>
-      <PackageVersion>$(_ResolvedVersion)</PackageVersion>
-      <AssemblyVersion>$(_ResolvedVersion)</AssemblyVersion>
-      <FileVersion>$(_ResolvedVersion)</FileVersion>
-      <InformationalVersion>$(_ResolvedVersion)</InformationalVersion>
+      <Version>$(_PackageVersion)</Version>
+      <PackageVersion>$(_PackageVersion)</PackageVersion>
+      <InformationalVersion>$(_PackageVersion)</InformationalVersion>
+      <AssemblyVersion>$(_NumericVersion)</AssemblyVersion>
+      <FileVersion>$(_NumericVersion)</FileVersion>
     </PropertyGroup>
 
-    <Message Importance="high" Text="WinDevicesNet version: $(_ResolvedVersion)" />
+    <Message Importance="high" Text="WinDevicesNet version: $(_PackageVersion) (assembly $(_NumericVersion))" />
   </Target>
 
   <!-- ===================================================================
