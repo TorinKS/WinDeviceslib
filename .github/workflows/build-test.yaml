@@ -35,10 +35,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v1.14
-        with:
-          cmake-version: '3.29'
+      # Use the CMake preinstalled on the runner image rather than pinning a
+      # version. windows-latest moved to windows-2025-vs2026, and a CMake
+      # older than the image's Visual Studio cannot name its generator: it
+      # silently falls back to NMake Makefiles and then fails with
+      # "CMAKE_CXX_COMPILER not set". The image always ships a CMake that
+      # knows its own toolchain.
+      - name: Report CMake version
+        shell: cmd
+        run: cmake --version
 
       - name: Configure CMake
         shell: cmd
