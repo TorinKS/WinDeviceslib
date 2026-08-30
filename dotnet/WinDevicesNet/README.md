@@ -14,48 +14,32 @@ A modern .NET 8.0 wrapper for the WinDevices USB enumeration library. This libra
 
 ## Installation
 
-### Using install.cmd (Recommended)
+```cmd
+dotnet add package WinDevicesNet
+```
 
-The simplest way to install WinDevicesNet is using the project's install script:
+That is the whole story. The package ships the native `WinDevices.dll` under
+`runtimes/win-x64/native/`, so the .NET SDK records it in your `deps.json` and
+the runtime loads it from your build output. You do **not** need to install
+anything machine-wide, add a `HintPath`, or copy the native library yourself.
+
+Target `net8.0-windows` or later. The library wraps the Windows Setup and
+Device Management APIs and only runs on Windows x64.
+
+```xml
+<ItemGroup>
+  <PackageReference Include="WinDevicesNet" Version="0.1.1" />
+</ItemGroup>
+```
+
+### Installing the native library machine-wide
+
+`install.cmd` copies the native library, headers, import library, and CMake
+package config to `C:\Program Files\WinDevices`. This is for **native C/C++
+consumers** using `find_package(WinDevices)`. .NET projects do not need it.
 
 ```cmd
-# From the WinDevicesLib root directory
-install.cmd
-
-# Or for release build
 install.cmd --config Release
-```
-
-This installs both native and .NET libraries to `C:\Program Files\WinDevices`.
-
-### Reference in Your Project
-
-After installation, add to your `.csproj`:
-
-```xml
-<ItemGroup>
-  <Reference Include="WinDevicesNet">
-    <HintPath>C:\Program Files\WinDevices\dotnet\WinDevicesNet.dll</HintPath>
-  </Reference>
-</ItemGroup>
-```
-
-The native DLL (`WinDevices.dll`) is located in the same directory and will be loaded automatically.
-
-### Custom Installation Path
-
-If you installed to a custom location:
-
-```xml
-<PropertyGroup>
-  <WinDevicesInstallDir>C:\SDK\WinDevices</WinDevicesInstallDir>
-</PropertyGroup>
-
-<ItemGroup>
-  <Reference Include="WinDevicesNet">
-    <HintPath>$(WinDevicesInstallDir)\dotnet\WinDevicesNet.dll</HintPath>
-  </Reference>
-</ItemGroup>
 ```
 
 ### Manual Build
@@ -65,7 +49,7 @@ cd dotnet\WinDevicesNet
 dotnet build -c Release
 ```
 
-The compiled library will be in `bin/Release/net8.0/WinDevicesNet.dll`
+The compiled library will be in `bin/Release/net8.0-windows/WinDevicesNet.dll`
 
 ## Usage
 

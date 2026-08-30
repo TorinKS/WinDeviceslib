@@ -1,0 +1,110 @@
+name: Publish NuGet
+
+# Runs on GitHub-hosted runners on purpose. This repository is public, so
+# hosted Actions minutes are free and a self-hosted runner must never be
+# attached to it: a fork pull request would execute arbitrary code on that
+# machine.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to build (e.g. 0.1.2). Leave empty to derive from the latest Git tag.'
+        required: false
+        type: string
+      publish:
+        description: 'Push the package to nuget.org'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  pack:
+    runs-on: windows-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          # Version is derived from the Git tag, so the full history and all
+          # tags must be present.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Configure native build
+        run: cmake -B build -DBUILD_TESTS=OFF -DBUILD_E2E_TESTS=OFF -DENABLE_COVERAGE=OFF
+
+      - name: Build native WinDevices.dll
+        run: cmake --build build --config Release --parallel
+
+      - name: Verify native artifact exists
+        shell: pwsh
+        run: |
+          $dll = 'build/bin/Release/WinDevices.dll'
+          if (-not (Test-Path $dll)) { throw "Native library not produced at $dll" }
+          Write-Host "Native library: $((Get-Item $dll).Length) bytes"
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          $args = @('pack', 'dotnet/WinDevicesNet/WinDevicesNet.csproj', '-c', 'Release', '-o', 'artifacts')
+          if ('${{ inputs.version }}') { $args += "-p:PackageVersionOverride=${{ inputs.version }}" }
+          & dotnet @args
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet pack failed' }
+
+      # A package that is missing the native library restores cleanly and
+      # then fails at the consumer's first P/Invoke. Fail here instead.
+      - name: Verify package layout
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem artifacts/*.nupkg | Select-Object -First 1
+          if (-not $pkg) { throw 'No .nupkg produced' }
+          Write-Host "Inspecting $($pkg.Name)"
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($pkg.FullName)
+          try {
+            $names = $zip.Entries.FullName
+            $names | Sort-Object | ForEach-Object { Write-Host "  $_" }
+
+            $managed = $names | Where-Object { $_ -like 'lib/*/WinDevicesNet.dll' }
+            $native  = $names | Where-Object { $_ -eq 'runtimes/win-x64/native/WinDevices.dll' }
+
+            if (-not $managed) { throw 'Package is missing lib/<tfm>/WinDevicesNet.dll' }
+            if (-not $native)  { throw 'Package is missing runtimes/win-x64/native/WinDevices.dll' }
+          }
+          finally {
+            $zip.Dispose()
+          }
+          Write-Host 'Package layout OK'
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: artifacts/*
+
+      - name: Push to nuget.org
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: pwsh
+        run: |
+          if (-not $env:NUGET_API_KEY) {
+            throw 'NUGET_API_KEY secret is not set. Create an API key at https://www.nuget.org/account/apikeys and add it to this repository''s secrets.'
+          }
+          dotnet nuget push 'artifacts/*.nupkg' `
+            --api-key $env:NUGET_API_KEY `
+            --source https://api.nuget.org/v3/index.json `
+            --skip-duplicate

@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!--
+      net8.0-windows, not net8.0: this assembly P/Invokes SetupAPI through
+      WinDevices.dll and cannot run anywhere else. Plain net8.0 would let a
+      non-Windows project reference it and fail at run time instead of at
+      restore time.
+    -->
+    <TargetFramework>net8.0-windows</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,13 +15,112 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AssemblyName>WinDevicesNet</AssemblyName>
     <RootNamespace>WinDevices.Net</RootNamespace>
-    <Version>1.0.0</Version>
-    <Authors>WinDevices Team</Authors>
-    <Description>.NET wrapper for WinDevices USB enumeration library</Description>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <Optimize>true</Optimize>
   </PropertyGroup>
+
+  <!-- ===================================================================
+       Package identity
+       =================================================================== -->
+  <PropertyGroup>
+    <PackageId>WinDevicesNet</PackageId>
+    <Authors>TorinKS</Authors>
+    <Description>.NET wrapper for the WinDevices library: Windows device enumeration and query built on the Setup and Device Management APIs. The package carries the native WinDevices.dll for win-x64, so no separate machine-wide installation is required.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/TorinKS/WinDeviceslib</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/TorinKS/WinDeviceslib</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>windows;usb;device;setupapi;enumeration;interop;native</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- ===================================================================
+       Versioning
+
+       The native half of this library takes its version from the Git tag
+       (see the root CMakeLists.txt). The managed half must not drift from
+       it, so it reads the same tag rather than hard-coding a literal.
+
+       Override in CI or for a local one-off:
+           dotnet pack -p:PackageVersionOverride=0.1.2
+       =================================================================== -->
+  <PropertyGroup>
+    <!-- Used only when Git is unavailable; matches the CMakeLists.txt fallback. -->
+    <FallbackVersion>0.1.0</FallbackVersion>
+  </PropertyGroup>
+
+  <Target Name="DeriveVersionFromGitTag"
+          BeforeTargets="GetAssemblyVersion;GenerateNuspec;CoreCompile;GenerateAssemblyInfo">
+
+    <Exec Command="git describe --tags --abbrev=0"
+          WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low"
+          ContinueOnError="true"
+          Condition="'$(PackageVersionOverride)' == ''">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitDescribeOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitDescribeExit" />
+    </Exec>
+
+    <PropertyGroup>
+      <_ResolvedVersion Condition="'$(PackageVersionOverride)' != ''">$(PackageVersionOverride)</_ResolvedVersion>
+      <_ResolvedVersion Condition="'$(_ResolvedVersion)' == '' And '$(_GitDescribeExit)' == '0'">$(_GitDescribeOutput.Trim().TrimStart('v'))</_ResolvedVersion>
+      <_ResolvedVersion Condition="'$(_ResolvedVersion)' == ''">$(FallbackVersion)</_ResolvedVersion>
+
+      <Version>$(_ResolvedVersion)</Version>
+      <PackageVersion>$(_ResolvedVersion)</PackageVersion>
+      <AssemblyVersion>$(_ResolvedVersion)</AssemblyVersion>
+      <FileVersion>$(_ResolvedVersion)</FileVersion>
+      <InformationalVersion>$(_ResolvedVersion)</InformationalVersion>
+    </PropertyGroup>
+
+    <Message Importance="high" Text="WinDevicesNet version: $(_ResolvedVersion)" />
+  </Target>
+
+  <!-- ===================================================================
+       Native runtime asset
+
+       NativeMethods.cs P/Invokes "WinDevices.dll". Shipping it under the
+       RID-specific runtimes/ convention means the SDK records it in the
+       consumer's deps.json runtimeTargets, and the host adds it to the
+       native probing path. Consumers therefore need no HintPath, no copy
+       step, and no machine-wide install.
+
+       WinDevices.dll is produced by the CMake target WinDevicesAPI
+       (add_library(... SHARED), OUTPUT_NAME "WinDevices").
+       Point elsewhere with -p:WinDevicesNativeDir=<dir-with-trailing-slash>
+       =================================================================== -->
+  <PropertyGroup>
+    <WinDevicesRuntimeId>win-x64</WinDevicesRuntimeId>
+    <WinDevicesNativeDir Condition="'$(WinDevicesNativeDir)' == ''">$(MSBuildThisFileDirectory)..\..\build\bin\$(Configuration)\</WinDevicesNativeDir>
+    <WinDevicesNativeDll>$(WinDevicesNativeDir)WinDevices.dll</WinDevicesNativeDll>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(WinDevicesNativeDll)')">
+    <None Include="$(WinDevicesNativeDll)"
+          Pack="true"
+          PackagePath="runtimes/$(WinDevicesRuntimeId)/native/"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="WinDevices.dll"
+          Visible="false" />
+  </ItemGroup>
+
+  <!--
+    A package without the native library looks fine and fails at the first
+    P/Invoke on the consumer's machine. Refuse to produce one.
+  -->
+  <Target Name="EnsureNativeLibraryPresent" BeforeTargets="GenerateNuspec">
+    <Error Condition="!Exists('$(WinDevicesNativeDll)')"
+           Text="Native WinDevices.dll not found at '$(WinDevicesNativeDll)'. Build it first, e.g.: cmake -B build -DBUILD_TESTS=OFF -DBUILD_E2E_TESTS=OFF &amp;&amp; cmake --build build --config $(Configuration). Or pass -p:WinDevicesNativeDir=&lt;dir&gt;." />
+  </Target>
 
 </Project>

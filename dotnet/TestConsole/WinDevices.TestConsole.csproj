@@ -2,27 +2,21 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- Must match WinDevicesNet, which is net8.0-windows. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
     <AssemblyName>WinDevices.TestConsole</AssemblyName>
     <RootNamespace>WinDevices.TestConsole</RootNamespace>
-
-    <!-- WinDevices installation directory -->
-    <WinDevicesInstallDir Condition="'$(WinDevicesInstallDir)' == ''">C:\Program Files\WinDevices</WinDevicesInstallDir>
   </PropertyGroup>
 
-  <!-- Reference the installed WinDevicesNet.dll -->
+  <!--
+    Referenced as a project, not through a HintPath into
+    C:\Program Files\WinDevices. Building this console no longer depends on
+    the library having been installed machine-wide, and the native
+    WinDevices.dll arrives in the output automatically because
+    WinDevicesNet declares it with CopyToOutputDirectory.
+  -->
   <ItemGroup>
-    <Reference Include="WinDevicesNet">
-      <HintPath>$(WinDevicesInstallDir)\dotnet\WinDevicesNet.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <!-- Copy native DLL from installation directory -->
-  <ItemGroup>
-    <None Include="$(WinDevicesInstallDir)\dotnet\WinDevices.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>WinDevices.dll</Link>
-    </None>
+    <ProjectReference Include="..\WinDevicesNet\WinDevicesNet.csproj" />
   </ItemGroup>
 
 </Project>
