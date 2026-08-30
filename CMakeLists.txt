@@ -61,15 +61,37 @@ project(WinDevices
 message(STATUS "${PROJECT_NAME} version: ${PROJECT_VERSION}")
 
 # Set install prefix
+#
+# User-writable by default, not Program Files. Building a library should not
+# require administrator rights, and a machine-global prefix holds exactly one
+# version, so two projects on different versions cannot coexist. It also
+# pushes consumers into absolute paths: an artifact outside the project can
+# only be named absolutely, which is how HintPath entries to
+# C:\Program Files\WinDevices ended up in this repository and downstream.
+#
+# This follows what the surrounding ecosystem does. NuGet resolves to
+# %USERPROFILE%\.nuget\packages, its caches to %LOCALAPPDATA%, none of them
+# elevated, all of them side-by-side per version.
+#
+# A machine-wide install remains available, but as a deliberate choice:
+#   cmake --install build --prefix "C:/Program Files/WinDevices"
+#   install.cmd --prefix "C:\Program Files\WinDevices"
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   if(WIN32)
-    set(CMAKE_INSTALL_PREFIX "$ENV{ProgramFiles}/${PROJECT_NAME}" CACHE PATH "Installation directory" FORCE)
+    if(DEFINED ENV{LOCALAPPDATA})
+      set(_wd_default_prefix "$ENV{LOCALAPPDATA}/${PROJECT_NAME}")
+    else()
+      set(_wd_default_prefix "$ENV{USERPROFILE}/.local/${PROJECT_NAME}")
+    endif()
+    set(CMAKE_INSTALL_PREFIX "${_wd_default_prefix}" CACHE PATH "Installation directory" FORCE)
+    unset(_wd_default_prefix)
   elseif(UNIX AND NOT APPLE)
-    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation directory" FORCE)
+    set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE PATH "Installation directory" FORCE)
   endif()
 endif()
 
 message(STATUS "Installation directory: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "  (override with -DCMAKE_INSTALL_PREFIX=<path>; no elevation is required for the default)")
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)

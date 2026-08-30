@@ -84,7 +84,7 @@ WD_DestroyDeviceManager(handle);
 
 ```cmake
 find_package(WinDevices REQUIRED)
-target_link_libraries(your_target PRIVATE WinDevices::WinDevicesAPI)
+target_link_libraries(your_target PRIVATE WinDevices::API)
 ```
 
 ### .NET API

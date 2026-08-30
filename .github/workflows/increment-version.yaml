@@ -307,7 +307,7 @@ jobs:
           $changelog += "    GIT_TAG $toTag`n"
           $changelog += ")`n"
           $changelog += "FetchContent_MakeAvailable(WinDevices)`n`n"
-          $changelog += "target_link_libraries(your_target PRIVATE WinDevices::WinDevicesAPI)`n"
+          $changelog += "target_link_libraries(your_target PRIVATE WinDevices::API)`n"
           $changelog += "```````n`n"
           $changelog += "### Manual Installation`n`n"
           $changelog += "Download the release package and extract to your preferred location.`n`n"

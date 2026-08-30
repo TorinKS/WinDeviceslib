@@ -130,3 +130,6 @@ temp/
 
 # NuGet pack output
 artifacts/
+
+# install.cmd/install.ps1 output when using a local prefix
+release-package/
