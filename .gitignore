@@ -127,3 +127,6 @@ extern/
 # CMake build directory
 build/
 temp/
+
+# NuGet pack output
+artifacts/

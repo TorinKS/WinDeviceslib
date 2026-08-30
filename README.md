@@ -112,11 +112,18 @@ manager.EnumerateUsbMassStorage();
 
 ### .NET Project Reference
 
-```xml
-<Reference Include="WinDevicesNet">
-  <HintPath>C:\Program Files\WinDevices\dotnet\WinDevicesNet.dll</HintPath>
-</Reference>
+```cmd
+dotnet add package WinDevicesNet
 ```
+
+```xml
+<PackageReference Include="WinDevicesNet" Version="0.1.1" />
+```
+
+The package carries the native `WinDevices.dll` under
+`runtimes/win-x64/native/`, so a .NET consumer needs no machine-wide
+installation. `install.cmd` remains the path for native C/C++ consumers that
+use `find_package(WinDevices)`.
 
 ## Build Scripts
 

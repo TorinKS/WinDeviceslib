@@ -224,7 +224,7 @@ if %BUILD_DOTNET%==1 (
 
     REM Copy native DLL to .NET output directory
     echo Copying native DLL to .NET output...
-    copy /Y "!NATIVE_DLL!" "dotnet\WinDevicesNet\bin\!CONFIG!\net8.0\" >nul
+    copy /Y "!NATIVE_DLL!" "dotnet\WinDevicesNet\bin\!CONFIG!\net8.0-windows\" >nul
     if errorlevel 1 (
         echo WARNING: Could not copy native DLL to .NET library output
     )
@@ -244,7 +244,7 @@ if %BUILD_DOTNET%==1 (
     popd
 
     REM Copy native DLL to test output directory
-    copy /Y "!NATIVE_DLL!" "dotnet\WinDevicesNet.Tests\bin\!CONFIG!\net8.0\" >nul
+    copy /Y "!NATIVE_DLL!" "dotnet\WinDevicesNet.Tests\bin\!CONFIG!\net8.0-windows\" >nul
     if errorlevel 1 (
         echo WARNING: Could not copy native DLL to test output
     )
@@ -341,14 +341,14 @@ if %RUN_INSTALL%==1 (
             if not exist "!INSTALL_PREFIX!\dotnet" mkdir "!INSTALL_PREFIX!\dotnet"
 
             REM Copy .NET DLL
-            copy /Y "dotnet\WinDevicesNet\bin\%CONFIG%\net8.0\WinDevicesNet.dll" "!INSTALL_PREFIX!\dotnet\" >nul
+            copy /Y "dotnet\WinDevicesNet\bin\%CONFIG%\net8.0-windows\WinDevicesNet.dll" "!INSTALL_PREFIX!\dotnet\" >nul
             if errorlevel 1 (
                 echo WARNING: Could not copy WinDevicesNet.dll
             )
 
             REM Copy XML documentation if it exists
-            if exist "dotnet\WinDevicesNet\bin\%CONFIG%\net8.0\WinDevicesNet.xml" (
-                copy /Y "dotnet\WinDevicesNet\bin\%CONFIG%\net8.0\WinDevicesNet.xml" "!INSTALL_PREFIX!\dotnet\" >nul
+            if exist "dotnet\WinDevicesNet\bin\%CONFIG%\net8.0-windows\WinDevicesNet.xml" (
+                copy /Y "dotnet\WinDevicesNet\bin\%CONFIG%\net8.0-windows\WinDevicesNet.xml" "!INSTALL_PREFIX!\dotnet\" >nul
             )
 
             REM Copy native DLL to .NET directory for self-contained deployment
@@ -375,7 +375,7 @@ echo.
 echo Build outputs:
 echo   Native DLL:  build\%PRESET%\bin\%CONFIG%\WinDevices.dll
 if %BUILD_DOTNET%==1 (
-    echo   .NET DLL:    dotnet\WinDevicesNet\bin\%CONFIG%\net8.0\WinDevicesNet.dll
+    echo   .NET DLL:    dotnet\WinDevicesNet\bin\%CONFIG%\net8.0-windows\WinDevicesNet.dll
 )
 if %RUN_INSTALL%==1 (
     echo.

@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- Must match WinDevicesNet, which is net8.0-windows. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -28,14 +29,14 @@
   </ItemGroup>
 
   <!--
-    Native DLL Integration Strategy:
-    The WinDevices.dll native library is built by CMake and needs to be copied
-    to the output directory for P/Invoke to work. The build-and-test.cmd script
-    handles this automatically.
+    Native DLL: WinDevicesNet declares WinDevices.dll with
+    CopyToOutputDirectory, and MSBuild flows that through the
+    ProjectReference, so it lands here automatically once the native
+    library has been built by CMake. No manual copy step.
 
-    For manual builds or CI, the native DLL should be copied to the output directory:
-    - Debug:   build\windows-debug\bin\Debug\WinDevices.dll
-    - Release: build\windows-release\bin\Release\WinDevices.dll
+    If P/Invoke fails at run time, the native build is missing. Build it
+    with the CMake configure and build steps from the repository README
+    (Release configuration).
   -->
 
 </Project>

@@ -147,7 +147,7 @@ if "%BUILD_DOTNET%"=="1" (
     popd
 
     :: Copy native DLL to .NET output for build verification
-    copy /Y "%BUILD_DIR%\bin\%BUILD_CONFIG%\WinDevices.dll" "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0\" >nul
+    copy /Y "%BUILD_DIR%\bin\%BUILD_CONFIG%\WinDevices.dll" "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0-windows\" >nul
 
     echo .NET library built successfully.
 )
@@ -193,15 +193,15 @@ if "%BUILD_DOTNET%"=="1" (
     if not exist "!DOTNET_INSTALL_DIR!" mkdir "!DOTNET_INSTALL_DIR!"
 
     :: Copy .NET DLL
-    copy /Y "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0\WinDevicesNet.dll" "!DOTNET_INSTALL_DIR!\" >nul
+    copy /Y "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0-windows\WinDevicesNet.dll" "!DOTNET_INSTALL_DIR!\" >nul
     if errorlevel 1 (
         echo ERROR: Could not copy WinDevicesNet.dll
         exit /b 1
     )
 
     :: Copy XML documentation if it exists
-    if exist "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0\WinDevicesNet.xml" (
-        copy /Y "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0\WinDevicesNet.xml" "!DOTNET_INSTALL_DIR!\" >nul
+    if exist "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0-windows\WinDevicesNet.xml" (
+        copy /Y "dotnet\WinDevicesNet\bin\%BUILD_CONFIG%\net8.0-windows\WinDevicesNet.xml" "!DOTNET_INSTALL_DIR!\" >nul
     )
 
     :: Copy native DLL to .NET directory for self-contained deployment
@@ -241,10 +241,12 @@ if "%BUILD_ONLY%"=="0" (
     echo   target_link_libraries(your_target PRIVATE WinDevices::WinDevicesAPI^)
     if "%BUILD_DOTNET%"=="1" (
         echo.
-        echo To use in your .NET project, add to your .csproj:
-        echo   ^<Reference Include="WinDevicesNet"^>
-        echo     ^<HintPath^>C:\Program Files\WinDevices\dotnet\WinDevicesNet.dll^</HintPath^>
-        echo   ^</Reference^>
+        echo To use from .NET, prefer the NuGet package - it carries the
+        echo native WinDevices.dll and needs no installed copy at all:
+        echo   dotnet add package WinDevicesNet
+        echo.
+        echo This machine-wide install is only needed for native C/C++
+        echo consumers, or to run the bundled tools against a local build.
     )
 )
 echo.

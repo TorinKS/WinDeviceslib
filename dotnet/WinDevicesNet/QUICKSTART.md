@@ -25,15 +25,20 @@ build-and-test.cmd release --install
 
 ### Add Reference to Your Project
 
-Add to your `.csproj`:
+```cmd
+dotnet add package WinDevicesNet
+```
+
+which adds:
 
 ```xml
 <ItemGroup>
-  <Reference Include="WinDevicesNet">
-    <HintPath>C:\Program Files\WinDevices\dotnet\WinDevicesNet.dll</HintPath>
-  </Reference>
+  <PackageReference Include="WinDevicesNet" Version="0.1.1" />
 </ItemGroup>
 ```
+
+The native `WinDevices.dll` travels inside the package, so nothing has to be
+installed on the machine and no `HintPath` is needed.
 
 ## Your First Program
 
@@ -219,13 +224,11 @@ Create a `.csproj` file:
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="WinDevicesNet">
-      <HintPath>C:\Program Files\WinDevices\dotnet\WinDevicesNet.dll</HintPath>
-    </Reference>
+    <PackageReference Include="WinDevicesNet" Version="0.1.1" />
   </ItemGroup>
 </Project>
 ```
