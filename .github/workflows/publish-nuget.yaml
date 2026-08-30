@@ -60,9 +60,20 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
-          # For workflow_run, check out the commit the triggering run used.
-          # The default would be the branch tip, which may already have moved.
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+          # Deliberately no `ref:`. A workflow_run job is privileged — it
+          # holds id-token: write and can mint a nuget.org publishing token —
+          # and this job then builds what it checks out. Checking out
+          # workflow_run.head_sha would run code from a commit this workflow
+          # did not choose, in that privileged context: the pattern CodeQL
+          # flags as actions/untrusted-checkout, and a real escalation path
+          # to publishing a package.
+          #
+          # The default checkout gives the default branch, which is trusted.
+          # Version Increment tags a commit on that branch, so the tag is
+          # present. If the branch has moved past the tag in between, the
+          # exact-tag guard below refuses to publish rather than releasing a
+          # mislabelled package, which is the correct failure.
+          #
           # Version is derived from the Git tag, so the full history and all
           # tags must be present.
           fetch-depth: 0
