@@ -17,7 +17,13 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Pinned, not windows-latest. windows-latest now provisions
+    # windows-2025-vs2026, and WinDevices.dll links the dynamic CRT
+    # (MSVCP140 / VCRUNTIME140), so a binary built with a newer toolset
+    # requires a redistributable at least as new on the target machine.
+    # Every other component in this program builds on VS 2022, so the
+    # native library is built on VS 2022 here too.
+    runs-on: windows-2022
     strategy:
       matrix:
         config: [Debug, Release]
