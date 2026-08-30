@@ -9,6 +9,21 @@ on:
   push:
     tags:
       - 'v*'
+
+  # Version Increment pushes its tag using GITHUB_TOKEN, and events created
+  # with that token deliberately do not start other workflows, so the tag
+  # push above never fires for an automated release. workflow_run is not a
+  # token-created event: it fires when the other workflow finishes, so the
+  # release path reaches here without a stored PAT.
+  #
+  # Kept as a trigger on this file rather than a reusable workflow called
+  # from Version Increment, because the Trusted Publisher policy is bound to
+  # this workflow's file name.
+  workflow_run:
+    workflows: ["Version Increment"]
+    types:
+      - completed
+
   workflow_dispatch:
     inputs:
       version:
@@ -30,6 +45,10 @@ jobs:
     # that floor for every downstream deployment.
     runs-on: windows-2022
 
+    # workflow_run fires whatever the outcome of the run that triggered it,
+    # so a failed Version Increment must not reach the publisher.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+
     permissions:
       contents: read
       # Required for NuGet Trusted Publishing: the job mints a short-lived
@@ -41,10 +60,27 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          # For workflow_run, check out the commit the triggering run used.
+          # The default would be the branch tip, which may already have moved.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
           # Version is derived from the Git tag, so the full history and all
           # tags must be present.
           fetch-depth: 0
           fetch-tags: true
+
+      # One place decides whether this run publishes, so the three steps
+      # below cannot drift apart. A tag push and a completed Version
+      # Increment both publish; a manual dispatch publishes only when asked.
+      - name: Decide whether to publish
+        id: gate
+        shell: pwsh
+        run: |
+          $publish =
+            '${{ github.event_name }}' -eq 'workflow_run' -or
+            '${{ github.ref }}'.StartsWith('refs/tags/v') -or
+            '${{ inputs.publish }}' -eq 'true'
+          Write-Host "event=${{ github.event_name }} ref=${{ github.ref }} publish=$publish"
+          "publish=$($publish.ToString().ToLower())" | Out-File $env:GITHUB_OUTPUT -Append
 
       # The version is derived with `git describe --tags --abbrev=0`, which
       # returns the nearest *ancestor* tag. On a branch that has moved past
@@ -55,7 +91,7 @@ jobs:
       # This is not hypothetical: 0.1.1 was published from a main that was
       # six commits ahead of the v0.1.1 tag.
       - name: Require HEAD to be exactly at a tag
-        if: (startsWith(github.ref, 'refs/tags/v') || inputs.publish) && inputs.version == ''
+        if: steps.gate.outputs.publish == 'true' && inputs.version == ''
         shell: pwsh
         run: |
           $tag = git describe --exact-match --tags HEAD 2>$null
@@ -141,14 +177,14 @@ explicit version input to publish deliberately.
       # against owner TorinKS, repository WinDeviceslib and workflow file
       # publish-nuget.yaml. Renaming this file invalidates that policy.
       - name: NuGet login (Trusted Publishing)
-        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+        if: steps.gate.outputs.publish == 'true'
         id: nuget_login
         uses: NuGet/login@v1
         with:
           user: ${{ vars.NUGET_USER }}
 
       - name: Push to nuget.org
-        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+        if: steps.gate.outputs.publish == 'true'
         shell: pwsh
         env:
           TEMP_NUGET_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}
