@@ -105,16 +105,16 @@ jobs:
         if: steps.gate.outputs.publish == 'true' && inputs.version == ''
         shell: pwsh
         run: |
+          # No PowerShell here-string here. Its body and closing "@ must
+          # start at column 0, which un-indents out of this YAML block
+          # scalar and makes the whole workflow file unparseable.
           $tag = git describe --exact-match --tags HEAD 2>$null
           if ($LASTEXITCODE -ne 0 -or -not $tag) {
             $near = git describe --tags --abbrev=0 2>$null
-            throw @"
-HEAD is not at a tag, so the derived version would be wrong.
-The nearest ancestor tag is '$near', but this commit is not that release.
-
-Either push a new tag for this commit, or re-run this workflow with an
-explicit version input to publish deliberately.
-"@
+            throw ("HEAD is not at a tag, so the derived version would be wrong. " +
+                   "The nearest ancestor tag is '$near', but this commit is not " +
+                   "that release. Either push a new tag for this commit, or re-run " +
+                   "this workflow with an explicit version input to publish deliberately.")
           }
           Write-Host "Publishing from tag $tag"
 
